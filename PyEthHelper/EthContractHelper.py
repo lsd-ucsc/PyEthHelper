@@ -46,11 +46,18 @@ def LoadBytesFromRelease(
 	return abiBytes, binBytes
 
 
-def LoadBytesFromLocal(projConf: dict, contract: str) -> Tuple[str, str]:
+def LoadBytesFromLocal(
+	projConf: Union[dict, Tuple[str, str]],
+	contract: str
+) -> Tuple[str, str]:
 
-	module = projConf['contractModuleMap'][contract]
+	if isinstance(projConf, tuple):
+		pathAbi, pathBin = projConf
+	else:
+		module = projConf['contractModuleMap'][contract]
+		pathAbi = os.path.join(projConf['buildDir'], module, contract + '.abi')
+		pathBin = os.path.join(projConf['buildDir'], module, contract + '.bin')
 
-	pathAbi = os.path.join(projConf['buildDir'], module, contract + '.abi')
 	if os.path.isfile(pathAbi) is False:
 		raise FileNotFoundError(
 			'Cannot find locally built contract ABI file at {}; '
@@ -60,7 +67,6 @@ def LoadBytesFromLocal(projConf: dict, contract: str) -> Tuple[str, str]:
 	with open(pathAbi, 'r') as f:
 		abiBytes = f.read()
 
-	pathBin = os.path.join(projConf['buildDir'], module, contract + '.bin')
 	if os.path.isfile(pathBin) is False:
 		raise FileNotFoundError(
 			'Cannot find locally built contract BIN file at {}; '
@@ -75,13 +81,17 @@ def LoadBytesFromLocal(projConf: dict, contract: str) -> Tuple[str, str]:
 
 def LoadContract(
 	w3: Web3,
-	projConf: Union[ dict, os.PathLike ],
+	projConf: Union[ dict, tuple, os.PathLike ],
 	contractName: str,
 	release: Union[ None, str ] = None,
 	address: Union[ None, str ] = None,
 ) -> Contract:
 
-	if not isinstance(projConf, dict):
+	if isinstance(projConf, tuple):
+		pass
+	elif isinstance(projConf, dict):
+		pass
+	else:
 		with open(projConf, 'r') as f:
 			projConf = json.load(f)
 
