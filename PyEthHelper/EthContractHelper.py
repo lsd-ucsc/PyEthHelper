@@ -188,14 +188,14 @@ def _SignTx(
 ) -> SignedTransaction:
 	logger = logging.getLogger(__name__ + '.' + _SignTx.__name__)
 
-	maxBaseFee = tx['maxFeePerGas']
-	maxPriorityFee = tx['maxPriorityFeePerGas']
+	maxPriorFeePerGas = tx['maxPriorityFeePerGas']
+	maxFeePerGas = tx['maxFeePerGas']
 	gas = tx['gas']
 	value = tx['value']
 
 	balance = w3.eth.get_balance(w3.eth.default_account)
 
-	maxFee = (maxBaseFee + maxPriorityFee) * gas
+	maxFee = maxFeePerGas * gas
 	maxCost = maxFee + value
 	if maxCost > balance:
 		raise RuntimeError(
@@ -206,18 +206,18 @@ def _SignTx(
 		)
 
 	if confirmPrompt:
-		baseFee = w3.eth.gas_price
+		baseFeePerGas = w3.eth.gas_price
+		baseFeePerGasGwei = w3.from_wei(baseFeePerGas, 'gwei')
+		baseFee = baseFeePerGas * gas
 		baseFeeGwei = w3.from_wei(baseFee, 'gwei')
-		fee = baseFee * gas
-		feeGwei = w3.from_wei(fee, 'gwei')
 
-		maxBaseFeeGwei = w3.from_wei(maxBaseFee, 'gwei')
-		maxPriorityFeeGwei = w3.from_wei(maxPriorityFee, 'gwei')
+		maxPriorFeePerGasGwei = w3.from_wei(maxPriorFeePerGas, 'gwei')
+		maxFeePerGasGwei = w3.from_wei(maxFeePerGas, 'gwei')
 		maxFeeGwei = w3.from_wei(maxFee, 'gwei')
 
 		valueEther = w3.from_wei(value, 'ether')
 
-		cost = fee + value
+		cost = baseFee + value
 		costEther = w3.from_wei(cost, 'ether')
 		maxCostEther = w3.from_wei(maxCost, 'ether')
 
@@ -226,10 +226,10 @@ def _SignTx(
 		minAfterBalanceEther = w3.from_wei(balance - maxCost, 'ether')
 
 		print('Gas:                  {}'.format(gas))
-		print('gas price:            {:.9f} Gwei'.format(baseFeeGwei))
-		print('Fee:                  {:.9f} Gwei'.format(feeGwei))
-		print('Max fee / gas:        {:.9f} Gwei'.format(maxBaseFeeGwei))
-		print('Max prior. fee / gas: {:.9f} Gwei'.format(maxPriorityFeeGwei))
+		print('Base fee gas / gas:   {:.9f} Gwei'.format(baseFeePerGasGwei))
+		print('Base fee:             {:.9f} Gwei'.format(baseFeeGwei))
+		print('Max prior. fee / gas: {:.9f} Gwei'.format(maxPriorFeePerGasGwei))
+		print('Max fee / gas:        {:.9f} Gwei'.format(maxFeePerGasGwei))
 		print('Max fee:              {:.9f} Gwei'.format(maxFeeGwei))
 		print('Value:                {:.18f} Ether'.format(valueEther))
 		print()
