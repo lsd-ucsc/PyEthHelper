@@ -16,7 +16,7 @@ import urllib.request
 import web3
 
 from eth_account.datastructures import SignedTransaction
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Callable, Dict, List, Tuple, Union
 from web3 import Web3 # python3 -m pip install web3
 from web3.contract.contract import Contract, ContractConstructor, ContractFunction
 from web3.types import TxReceipt
@@ -133,16 +133,17 @@ def _DetermineGas(
 	return gas
 
 
-def _DetermineMaxPriorFee(
-	w3: Web3,
-) -> int:
-	baseGasFee = w3.eth.gas_price
+def DefaultFeeCalculator(
+	ethGasPrice: int,
+	ethMaxPriorityFee: int,
+) -> Tuple[int, int]:
+	# determine max priority fee
 	# priority fee is 2% of base fee
-	maxPriorFee = int(baseGasFee * 2) // 100
+	maxPriorFee = (ethGasPrice * 2) // 100
 	# ensure it's higher than w3.eth.max_priority_fee
-	maxPriorFee = max(maxPriorFee, int(w3.eth.max_priority_fee))
+	maxPriorFee = max(maxPriorFee, ethMaxPriorityFee)
 
-	return maxPriorFee
+	return maxPriorFee, ethGasPrice + maxPriorFee
 
 
 def _FillMessage(
@@ -150,6 +151,7 @@ def _FillMessage(
 	gas: int,
 	value: int,
 	privKey: Union[ None, str ],
+	feeCalculator: Callable[[int, int], Tuple[int, int]],
 ) -> dict:
 
 	msg = {
@@ -159,8 +161,12 @@ def _FillMessage(
 		'value': value,
 	}
 	if privKey is not None:
-		msg['maxFeePerGas'] = int(w3.eth.gas_price * 2)
-		msg['maxPriorityFeePerGas'] = _DetermineMaxPriorFee(w3)
+		maxPrioriyFee, maxFee = feeCalculator(
+			ethGasPrice=int(w3.eth.gas_price),
+			ethMaxPriorityFee=int(w3.eth.max_priority_fee),
+		)
+		msg['maxPriorityFeePerGas'] = maxPrioriyFee
+		msg['maxFeePerGas'] = maxFee
 
 	return msg
 
@@ -244,11 +250,12 @@ def _DoTransaction(
 	gas: Union[ None, int ],
 	value: int,
 	confirmPrompt: bool,
+	feeCalculator: Callable[[int, int], Tuple[int, int]],
 ) -> TxReceipt:
 	logger = logging.getLogger(__name__ + '.' + _DoTransaction.__name__)
 
 	gas = _DetermineGas(executable, gas, value)
-	msg = _FillMessage(w3, gas, value, privKey)
+	msg = _FillMessage(w3, gas, value, privKey, feeCalculator)
 
 	if privKey is None:
 		# no signing needed
@@ -292,6 +299,7 @@ def DeployContract(
 	gas: Union[int, None] = None,
 	value: int = 0,
 	confirmPrompt: bool = True,
+	feeCalculator: Callable[[int, int], Tuple[int, int]] = DefaultFeeCalculator,
 ) -> TxReceipt:
 	logger = logging.getLogger(__name__ + '.' + DeployContract.__name__)
 
@@ -306,6 +314,7 @@ def DeployContract(
 		gas=gas,
 		value=value if isPayable else 0,
 		confirmPrompt=confirmPrompt,
+		feeCalculator=feeCalculator,
 	)
 	logger.info('Contract deployed at {}'.format(receipt.contractAddress))
 
@@ -335,6 +344,7 @@ def CallContractFunc(
 	gas: Union[int, None] = None,
 	value: int = 0,
 	confirmPrompt: bool = True,
+	feeCalculator: Callable[[int, int], Tuple[int, int]] = DefaultFeeCalculator,
 ) -> Union[TxReceipt, Any]:
 	logger = logging.getLogger(__name__ + '.' + CallContractFunc.__name__)
 
@@ -357,6 +367,7 @@ def CallContractFunc(
 			gas=gas,
 			value=value if isPayable else 0,
 			confirmPrompt=confirmPrompt,
+			feeCalculator=feeCalculator,
 		)
 
 		return receipt
