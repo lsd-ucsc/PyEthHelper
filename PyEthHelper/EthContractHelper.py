@@ -155,6 +155,11 @@ def DefaultFeeCalculator(
 	return maxPriorFee, ethGasPrice + maxPriorFee
 
 
+def GetBaseFeePerGas(w3: Web3) -> int:
+	h = w3.eth.fee_history(1, 'latest')
+	return int(h['baseFeePerGas'][-1])
+
+
 def _FillMessage(
 	w3: Web3,
 	gas: int,
@@ -171,7 +176,7 @@ def _FillMessage(
 	}
 	if privKey is not None:
 		maxPrioriyFee, maxFee = feeCalculator(
-			ethGasPrice=int(w3.eth.gas_price),
+			ethGasPrice=GetBaseFeePerGas(w3),
 			ethMaxPriorityFee=int(w3.eth.max_priority_fee),
 		)
 		msg['maxPriorityFeePerGas'] = maxPrioriyFee
@@ -206,7 +211,7 @@ def _SignTx(
 		)
 
 	if confirmPrompt:
-		baseFeePerGas = w3.eth.gas_price
+		baseFeePerGas = GetBaseFeePerGas(w3)
 		baseFeePerGasGwei = w3.from_wei(baseFeePerGas, 'gwei')
 		baseFee = baseFeePerGas * gas
 		baseFeeGwei = w3.from_wei(baseFee, 'gwei')
