@@ -17,7 +17,7 @@ import PyEthHelper._Meta
 setup(
 	name        = PyEthHelper._Meta.PKG_NAME,
 	version     = PyEthHelper._Meta.__version__,
-	packages    = find_packages(where='.', exclude=['main.py']),
+	packages    = find_packages(where='.', exclude=['setup.py']),
 	url         = 'https://github.com/lsd-ucsc/PyEthHelper',
 	license     = PyEthHelper._Meta.PKG_LICENSE,
 	author      = PyEthHelper._Meta.PKG_AUTHOR,
@@ -28,6 +28,6 @@ setup(
 		]
 	},
 	install_requires=[
-		'web3>=6.2.0',
+		'web3==6.2.0',
 	],
 )

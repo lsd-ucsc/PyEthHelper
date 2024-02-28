@@ -13,6 +13,7 @@ import logging
 
 from web3 import Web3
 
+from . import _Meta
 from .EthContractHelper import (
 	LoadContract,
 	DeployContract,
@@ -26,6 +27,10 @@ def main():
 	argParser = argparse.ArgumentParser(
 		description='Deploy contracts to Ethereum blockchain',
 		prog='',
+	)
+	argParser.add_argument(
+		'--version',
+		action='version', version=f'{_Meta.__version__}',
 	)
 	argParser.add_argument(
 		'--config', '-c', type=str, default='project_conf.json', required=False,

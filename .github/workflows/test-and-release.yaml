@@ -1,0 +1,58 @@
+name: test_and_release
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  create_tag:
+    permissions:
+      contents: write
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ 3.11 ]
+
+    name: A job to test the functionalities of the code
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Installing Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Installing this repo as a Python package
+      run: |
+        python3 -m pip install ${{ github.workspace }}
+
+    - name: Installing GitHubApiHelper
+      run: |
+        python3 -m pip install git+https://github.com/zhenghaven/GitHubApiHelper.git@v0.1.2
+
+    - name: Get latest version
+      id: latest_ver
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        python3 -m GitHubApiHelper --auth-token \
+          api_tags_latest_ver \
+            --repo ${{ github.repository }} \
+            -l $(python3 -m PyEthHelper --version) \
+            --github-out
+
+    - name: Create tag
+      if: ${{ startsWith(github.ref, 'refs/heads/main') && steps.latest_ver.outputs.remote != steps.latest_ver.outputs.all }}
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.git.createRef({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            ref: 'refs/tags/${{ steps.latest_ver.outputs.allV }}',
+            sha: context.sha
+          })
