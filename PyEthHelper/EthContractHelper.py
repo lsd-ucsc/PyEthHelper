@@ -292,6 +292,9 @@ def _DoTransaction(
 		)
 	))
 
+	if receipt.status == 0:
+		raise RuntimeError('Transaction failed')
+
 	return receipt
 
 
