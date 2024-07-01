@@ -14,6 +14,7 @@ import os
 import urllib.request
 import web3
 
+from eth_account import Account
 from eth_account.datastructures import SignedTransaction
 from typing import Any, Callable, Dict, List, Tuple, Union
 from web3 import Web3 # python3 -m pip install web3
@@ -164,12 +165,14 @@ def _FillMessage(
 	w3: Web3,
 	gas: int,
 	value: int,
-	privKey: Union[ None, str ],
+	privKey: Union[ None, str, Account ],
 	feeCalculator: Callable[[int, int], Tuple[int, int]],
 ) -> dict:
+	if (privKey is not None) and (not isinstance(privKey, Account)):
+		privKey: Account = Account.from_key(privKey)
 
 	msg = {
-		'nonce': w3.eth.get_transaction_count(w3.eth.default_account),
+		'nonce': w3.eth.get_transaction_count(privKey.address),
 		'chainId': w3.eth.chain_id,
 		'gas': gas,
 		'value': value,
@@ -188,7 +191,7 @@ def _FillMessage(
 def _SignTx(
 	w3: Web3,
 	tx: dict,
-	privKey: str,
+	privKey: Union[ str, Account ],
 	confirmPrompt: bool
 ) -> SignedTransaction:
 	logger = logging.getLogger(__name__ + '.' + _SignTx.__name__)
@@ -198,7 +201,9 @@ def _SignTx(
 	gas = tx['gas']
 	value = tx['value']
 
-	balance = w3.eth.get_balance(w3.eth.default_account)
+	if not isinstance(privKey, Account):
+		privKey: Account = Account.from_key(privKey)
+	balance = w3.eth.get_balance(privKey.address)
 
 	maxFee = maxFeePerGas * gas
 	maxCost = maxFee + value
@@ -252,7 +257,7 @@ def _SignTx(
 	logger.info(
 		'Signing transaction with max cost of {} wei'.format(maxCost)
 	)
-	signedTx = w3.eth.account.sign_transaction(tx, privKey)
+	signedTx = w3.eth.account.sign_transaction(tx, privKey.key)
 
 	return signedTx
 
@@ -260,13 +265,16 @@ def _SignTx(
 def _DoTransaction(
 	w3: Web3,
 	executable: Union[ ContractConstructor, ContractFunction ],
-	privKey: Union[ None, str ],
+	privKey: Union[ None, str, Account ],
 	gas: Union[ None, int ],
 	value: int,
 	confirmPrompt: bool,
 	feeCalculator: Callable[[int, int], Tuple[int, int]],
 ) -> TxReceipt:
 	logger = logging.getLogger(__name__ + '.' + _DoTransaction.__name__)
+
+	if (privKey is not None) and (not isinstance(privKey, Account)):
+		privKey: Account = Account.from_key(privKey)
 
 	gas = _DetermineGas(executable, gas, value)
 	msg = _FillMessage(w3, gas, value, privKey, feeCalculator)
@@ -287,7 +295,7 @@ def _DoTransaction(
 
 	logger.info('Balance after transaction: {} Ether'.format(
 		w3.from_wei(
-			w3.eth.get_balance(w3.eth.default_account),
+			w3.eth.get_balance(privKey.address),
 			'ether'
 		)
 	))
@@ -312,7 +320,7 @@ def DeployContract(
 	w3: Web3,
 	contract: Contract,
 	arguments: list,
-	privKey: Union[str, None] = None,
+	privKey: Union[str, None, Account] = None,
 	gas: Union[int, None] = None,
 	value: int = 0,
 	confirmPrompt: bool = True,
@@ -357,7 +365,7 @@ def CallContractFunc(
 	contract: Contract,
 	funcName: str,
 	arguments: list,
-	privKey: Union[str, None] = None,
+	privKey: Union[str, None, Account] = None,
 	gas: Union[int, None] = None,
 	value: int = 0,
 	confirmPrompt: bool = True,

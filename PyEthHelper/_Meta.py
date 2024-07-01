@@ -9,7 +9,7 @@
 
 
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 PKG_AUTHOR = 'Languages, Systems, and Data Lab at UC Santa Cruz'
 PKG_NAME = 'PyEthHelper'
