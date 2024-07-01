@@ -112,6 +112,10 @@ def LoadContract(
 	return contract
 
 
+def IsAccountType(obj: Any) -> bool:
+	return (obj is not None) and hasattr(obj, 'address') and hasattr(obj, 'key')
+
+
 def _EstimateGas(
 	executable: Union[ ContractConstructor, ContractFunction ],
 	value: int,
@@ -168,8 +172,8 @@ def _FillMessage(
 	privKey: Union[ None, str, Account ],
 	feeCalculator: Callable[[int, int], Tuple[int, int]],
 ) -> dict:
-	if (privKey is not None) and (not isinstance(privKey, Account)):
-		privKey: Account = Account.from_key(privKey)
+	if (privKey is not None) and (not IsAccountType(privKey)):
+		privKey = Account.from_key(privKey)
 
 	msg = {
 		'nonce': w3.eth.get_transaction_count(privKey.address),
@@ -201,8 +205,8 @@ def _SignTx(
 	gas = tx['gas']
 	value = tx['value']
 
-	if not isinstance(privKey, Account):
-		privKey: Account = Account.from_key(privKey)
+	if not IsAccountType(privKey):
+		privKey = Account.from_key(privKey)
 	balance = w3.eth.get_balance(privKey.address)
 
 	maxFee = maxFeePerGas * gas
@@ -273,8 +277,8 @@ def _DoTransaction(
 ) -> TxReceipt:
 	logger = logging.getLogger(__name__ + '.' + _DoTransaction.__name__)
 
-	if (privKey is not None) and (not isinstance(privKey, Account)):
-		privKey: Account = Account.from_key(privKey)
+	if (privKey is not None) and (not IsAccountType(privKey)):
+		privKey = Account.from_key(privKey)
 
 	gas = _DetermineGas(executable, gas, value)
 	msg = _FillMessage(w3, gas, value, privKey, feeCalculator)
