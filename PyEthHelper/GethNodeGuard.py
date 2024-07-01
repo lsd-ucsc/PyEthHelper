@@ -100,6 +100,7 @@ class GethDevNodeGuard(GethNodeGuard):
 		super(GethDevNodeGuard, self).__init__(cmd=cmd, termTimeout=termTimeout)
 
 		self.httpPort = httpPort
+		self.connTimeout = connTimeout
 
 		self.w3 = None
 		self.devAccount = None
@@ -114,7 +115,7 @@ class GethDevNodeGuard(GethNodeGuard):
 			web3.HTTPProvider(f'http://127.0.0.1:{self.httpPort}')
 		)
 		while not self.w3.is_connected():
-			if time.time() - startTime >= self.termTimeout:
+			if time.time() - startTime >= self.connTimeout:
 				raise RuntimeError('failed to connect to the Geth node')
 			time.sleep(connInterval)
 

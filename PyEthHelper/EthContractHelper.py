@@ -290,7 +290,7 @@ def _DoTransaction(
 		# need to sign
 		tx = executable.build_transaction(msg)
 		signedTx = _SignTx(w3, tx, privKey, confirmPrompt)
-		txHash = w3.eth.send_raw_transaction(signedTx.rawTransaction)
+		txHash = w3.eth.send_raw_transaction(signedTx.raw_transaction)
 
 	receipt = w3.eth.wait_for_transaction_receipt(txHash)
 
