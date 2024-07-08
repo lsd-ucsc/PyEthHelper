@@ -19,11 +19,17 @@ import web3
 
 class GethNodeGuard(object):
 
-	def __init__(self, cmd: List[str], termTimeout: int = 10):
+	def __init__(
+		self,
+		cmd: List[str],
+		termTimeout: int = 10,
+		showOutput: bool = False
+	):
 		super(GethNodeGuard, self).__init__()
 
 		self.cmd = cmd
 		self.termTimeout = termTimeout
+		self.showOutput = showOutput
 
 		self.proc = None
 
@@ -34,9 +40,9 @@ class GethNodeGuard(object):
 		self.logger.info(f'Starting Geth node with command: {cmdStr}')
 		self.proc = subprocess.Popen(
 			[ str(x) for x in self.cmd ],
-			stdin=subprocess.DEVNULL,
-			stdout=subprocess.DEVNULL,
-			stderr=subprocess.DEVNULL,
+			stdin =subprocess.DEVNULL,
+			stdout=subprocess.DEVNULL if not self.showOutput else None,
+			stderr=subprocess.DEVNULL if not self.showOutput else None,
 		)
 
 	def Stop(self) -> None:
@@ -85,6 +91,7 @@ class GethDevNodeGuard(GethNodeGuard):
 		httpApis: List[str] = DEFAULT_HTTP_APIS,
 		connTimeout: int = 5,
 		termTimeout: int = 10,
+		debug: bool = False
 	):
 		httpApisStr = ','.join(httpApis)
 		cmd = [
@@ -97,13 +104,26 @@ class GethDevNodeGuard(GethNodeGuard):
 			'--http.api', httpApisStr,
 			'--http.port', httpPort,
 		]
-		super(GethDevNodeGuard, self).__init__(cmd=cmd, termTimeout=termTimeout)
+		if debug:
+			cmd += [
+				'--log.debug',
+				'--verbosity', 5, # verbosity level set to 5 - detail
+			]
+		super(GethDevNodeGuard, self).__init__(
+			cmd=cmd,
+			termTimeout=termTimeout,
+			showOutput=debug
+		)
 
 		self.httpPort = httpPort
 		self.connTimeout = connTimeout
 
 		self.w3 = None
 		self.devAccount = None
+
+		self.logger.info(
+			'Debug mode is {}'.format('enabled' if debug else 'disabled')
+		)
 
 	def Start(self) -> None:
 		super(GethDevNodeGuard, self).Start()
