@@ -119,12 +119,17 @@ def IsAccountType(obj: Any) -> bool:
 def _EstimateGas(
 	executable: Union[ ContractConstructor, ContractFunction ],
 	value: int,
+	fromAcc: Union[ None, Account ],
 ) -> int:
 	logger = logging.getLogger(__name__ + '.' + _EstimateGas.__name__)
 
-	gas = executable.estimate_gas({
+	txDict = {
 		'value': value,
-	})
+	}
+	if fromAcc is not None:
+		txDict['from'] = fromAcc.address
+
+	gas = executable.estimate_gas(txDict)
 	logger.info('Estimated gas: {}'.format(gas))
 	# add a little bit flexibility
 	gas = int(gas * 1.1)
@@ -136,11 +141,12 @@ def _DetermineGas(
 	executable: Union[ ContractConstructor, ContractFunction ],
 	gas: Union[ None, int ],
 	value: int,
+	fromAcc: Union[ None, Account ],
 ) -> int:
 	logger = logging.getLogger(__name__ + '.' + _DetermineGas.__name__)
 
 	if gas is None:
-		gas = _EstimateGas(executable, value)
+		gas = _EstimateGas(executable, value, fromAcc=fromAcc)
 
 	logger.debug('Gas: {}; Value: {}'.format(gas, value))
 
@@ -280,7 +286,7 @@ def _DoTransaction(
 	if (privKey is not None) and (not IsAccountType(privKey)):
 		privKey = Account.from_key(privKey)
 
-	gas = _DetermineGas(executable, gas, value)
+	gas = _DetermineGas(executable, gas, value, fromAcc=privKey)
 	msg = _FillMessage(w3, gas, value, privKey, feeCalculator)
 
 	if privKey is None:
